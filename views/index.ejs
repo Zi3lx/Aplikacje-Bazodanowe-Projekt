@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <style>
+        body.dark-mode {
+            background-color: #333;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <button onclick="toggleDarkMode()">Zmień na tryb ciemny</button>
+    
+    <h2>Lista postów</h2>
+    
+    <div class="container">
+        <h1>Witaj w Markecie</h1>
+        <% if (user) { %>
+            <p>Witaj, <%= user.first_name %> <%= user.last_name %>!</p>
+            <a href="/logout">Wyloguj się</a>
+            <a href="/cart">Twój koszyk</a>
+            <a href="/orders">Zobacz swoje zamówienia</a>
+            <a href="/products/new">Dodaj nowy produkt</a>
+            <% if (user.role === 'admin') { %>
+                <a href="/admin">Admin panel</a>
+            <% } %>
+        <% } else { %>
+            <a href="/login">Zaloguj się</a>
+            <a href="/register">Zarejestruj się</a>
+        <% } %>
+        
+        <h2>Produkty dostępne do kupienia:</h2>
+        <ul>
+            <% products.forEach(product => { %>
+                <li>
+                    <%= product.name %> - <%= product.price %> PLN - 
+                    <% if (product.description.length > 15) { %>
+                        <span id="description<%= product.id %>"><%= product.description.substring(0, 15) %></span>
+                        <button onclick="toggleDescription('<%= product.id %>', '<%= product.description %>')">...</button>
+
+                    <% } else { %>
+                        <%= product.description %>
+                    <% } %>
+
+                    <script>
+                        function toggleDescription(productId, description) {
+                            var descriptionSpan = document.getElementById('description' + productId);
+                            var button = event.target;
+                            if (descriptionSpan.innerText.length === 15) {
+                                descriptionSpan.innerText = description;
+                                button.innerText = 'Zwiń';
+                            } else {
+                                descriptionSpan.innerText = description.substring(0, 15);
+                                button.innerText = '...';
+                            }
+                        }
+                    </script>
+                    
+
+
+                    <% if (user) { %>
+                        <form action="/cart" method="post" style="display:inline;">
+                            <input type="hidden" name="product_id" value="<%= product.id %>">
+                            <input type="number" name="quantity" value="1" min="1" required>
+                            <button type="submit">Dodaj do koszyka</button>
+                        </form>
+                        <% if (user.id === product.user_id || user.role === 'admin') { %>
+                            <a href="/products/<%= product.id %>/edit">Edytuj</a>
+                            <form action="/products/<%= product.id %>/delete?_method=DELETE" method="post" style="display:inline;">
+                                <button type="submit">Usuń</button>
+                            </form>                            
+                        <% } %>
+                    <% } %>
+                </li>
+            <% }) %>
+        </ul>
+    </div>
+
+    <script>
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+    </script>
+</body>
+</html>

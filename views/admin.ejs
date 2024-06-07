@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+</head>
+<body>
+    <h1>Admin Dashboard</h1>
+    <a href="/">Strona główna</a>
+
+    <h2>Manage Users</h2>
+    <form method="get" action="/admin" id="userFilterForm">
+        <label for="userRoleFilter">Filter by Role:</label>
+        <select name="userRoleFilter" id="userRoleFilter" onchange="document.getElementById('userFilterForm').submit()">
+            <option value="">All</option>
+            <option value="customer" <%= userRoleFilter === 'customer' ? 'selected' : '' %>>Customer</option>
+            <option value="admin" <%= userRoleFilter === 'admin' ? 'selected' : '' %>>Admin</option>
+        </select>
+    </form>
+
+    <form method="get" action="/admin" id="userSortForm">
+        <label for="userSort">Sort by:</label>
+        <select name="userSort" id="userSort" onchange="document.getElementById('userSortForm').submit()">
+            <option value="">None</option>
+            <option value="first_name" <%= userSort === 'first_name' ? 'selected' : '' %>>First Name</option>
+            <option value="last_name" <%= userSort === 'last_name' ? 'selected' : '' %>>Last Name</option>
+            <option value="email" <%= userSort === 'email' ? 'selected' : '' %>>Email</option>
+        </select>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% users.forEach(user => { %>
+                <tr>
+                    <td><%= user.id %></td>
+                    <td><%= user.first_name %></td>
+                    <td><%= user.last_name %></td>
+                    <td><%= user.email %></td>
+                    <td><%= user.role %></td>
+                    <td>
+                        <form action="/admin/users/<%= user.id %>?_method=DELETE" method="post" style="display:inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                        <form action="/admin/users/<%= user.id %>?_method=PUT" method="post" style="display:inline;">
+                            <input type="text" name="first_name" value="<%= user.first_name %>" required>
+                            <input type="text" name="last_name" value="<%= user.last_name %>" required>
+                            <input type="email" name="email" value="<%= user.email %>" required>
+                            <select name="role" required>
+                                <option value="customer" <%= user.role === 'customer' ? 'selected' : '' %>>Customer</option>
+                                <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>Admin</option>
+                            </select>
+                            <button type="submit">Save Changes</button>
+                        </form>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+
+    <h2>Add New User</h2>
+    <form action="/admin/users" method="post">
+        <input type="text" name="first_name" placeholder="First Name" required>
+        <input type="text" name="last_name" placeholder="Last Name" required>
+        <input type="email" name="email" placeholder="Email" required>
+        <input type="password" name="password" placeholder="Password" required>
+        <select name="role" required>
+            <option value="customer">Customer</option>
+            <option value="admin">Admin</option>
+        </select>
+        <button type="submit">Add User</button>
+    </form>
+
+    <h2>Manage Orders</h2>
+    <form method="get" action="/admin" id="orderFilterForm">
+        <label for="orderStatusFilter">Filter by Status:</label>
+        <select name="orderStatusFilter" id="orderStatusFilter" onchange="document.getElementById('orderFilterForm').submit()">
+            <option value="">All</option>
+            <option value="pending" <%= orderStatusFilter === 'pending' ? 'selected' : '' %>>Pending</option>
+            <option value="completed" <%= orderStatusFilter === 'completed' ? 'selected' : '' %>>Completed</option>
+            <option value="cancelled" <%= orderStatusFilter === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+        </select>
+    </form>
+
+    <form method="get" action="/admin" id="orderSortForm">
+        <label for="orderSort">Sort by:</label>
+        <select name="orderSort" id="orderSort" onchange="document.getElementById('orderSortForm').submit()">
+            <option value="">None</option>
+            <option value="user_id" <%= orderSort === 'user_id' ? 'selected' : '' %>>User ID</option>
+            <option value="created_at" <%= orderSort === 'created_at' ? 'selected' : '' %>>Order Date</option>
+            <option value="status" <%= orderSort === 'status' ? 'selected' : '' %>>Status</option>
+        </select>
+    </form>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>User ID</th>
+                <th>Order Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% orders.forEach(order => { %>
+                <tr>
+                    <td><%= order.id %></td>
+                    <td><%= order.user_id %></td>
+                    <td><%= order.created_at %></td>
+                    <td><%= order.status %></td>
+                    <td>
+                        <form action="/admin/orders/<%= order.id %>?_method=PUT" method="post" style="display:inline">
+                            <label for="status">Status:</label>
+                            <select name="status" id="status">
+                                <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                                <option value="shipped" <%= order.status === 'shipped' ? 'selected' : '' %>>Shipped</option>
+                                <option value="delivered" <%= order.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                                <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+                            </select>
+                            <button type="submit">Update Order</button>
+                        </form>
+                        
+                        <form action="/admin/orders/<%= order.id %>?_method=DELETE" method="post" style="display:inline;">
+                            <button type="submit">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</body>
+</html>

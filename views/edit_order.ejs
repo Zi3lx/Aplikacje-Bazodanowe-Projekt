@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Order</title>
+</head>
+<body>
+    <h1>Edit Order</h1>
+    <form action="/admin/orders/<%= order.id %>" method="put">
+        <label for="status">Status:</label>
+        <select name="status" id="status">
+            <option value="pending" <%= order.status === 'pending' ? 'selected' : '' %>>Pending</option>
+            <option value="completed" <%= order.status === 'completed' ? 'selected' : '' %>>Completed</option>
+            <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
+        </select>
+        <button type="submit">Update Order</button>
+    </form>
+</body>
+</html>
