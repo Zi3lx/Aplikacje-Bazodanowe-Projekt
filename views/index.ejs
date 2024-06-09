@@ -33,6 +33,12 @@
         <% } %>
         
         <h2>Produkty dostępne do kupienia:</h2>
+        <div>
+            <span>Sortuj według:</span>
+            <a href="/?sortBy=name">Nazwa</a> |
+            <a href="/?sortBy=price">Cena</a>
+        </div>
+        
         <ul>
             <% products.forEach(product => { %>
                 <li>
@@ -58,8 +64,6 @@
                             }
                         }
                     </script>
-                    
-
 
                     <% if (user) { %>
                         <form action="/cart" method="post" style="display:inline;">

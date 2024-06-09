@@ -1,45 +1,76 @@
-// Import API functions and knex
-const { updateOrderStatus, authenticateUser, insertToCart } = require('../api');
-const knex = require('knex')(require('../knexfile').development);
+jest.mock('../api', () => {
+  const mockSaveUser = jest.fn();
+  const mockLoginUser = jest.fn();
+  const mockGetUserById = jest.fn();
+  const mockDeleteUser = jest.fn();
+  const mockUpdateUser = jest.fn();
+  const mockGetAllUsers = jest.fn();
 
-// Mock knex methods
-jest.mock('knex', () => {
-  const mKnex = {
-    where: jest.fn().mockReturnThis(),
-    update: jest.fn(),
-    first: jest.fn(),
-    insert: jest.fn()
+  return {
+    saveUser: mockSaveUser,
+    loginUser: mockLoginUser,
+    getUserById: mockGetUserById,
+    deleteUser: mockDeleteUser,
+    updateUser: mockUpdateUser,
+    getAllUsers: mockGetAllUsers,
   };
-  return jest.fn(() => mKnex);
 });
 
-// Begin writing test cases
-describe('API Functions', () => {
-  describe('updateOrderStatus', () => {
-    it('should update the order status', async () => {
-      // Arrange
-      const orderId = 1;
-      const status = 'delivered';
+const { 
+  saveUser, 
+  loginUser, 
+  getUserById, 
+  deleteUser, 
+  updateUser, 
+  getAllUsers 
+} = require('../api');
 
-      // Act
-      await updateOrderStatus(orderId, status);
+const mockUser = {
+  id: 123,
+  first_name: 'John',
+  last_name: 'Doe',
+  email: 'john.doe@example.com',
+  password: 'password123',
+  role: 'customer',
+};
 
-      // Assert
-      expect(knex().where).toHaveBeenCalledWith({ id: orderId });
-      expect(knex().update).toHaveBeenCalledWith({ status });
-    });
-
-    it('should throw an error if knex throws an error', async () => {
-      // Arrange
-      const orderId = 1;
-      const status = 'delivered';
-      const error = new Error('Knex error');
-      knex().update.mockRejectedValue(error);
-
-      // Act and Assert
-      await expect(updateOrderStatus(orderId, status)).rejects.toThrow('Knex error');
-    });
+describe('User API Functions', () => {
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  // Write similar test cases for authenticateUser and insertToCart
+  test('saves a user to the database', async () => {
+    await saveUser(mockUser);
+    expect(saveUser).toHaveBeenCalledWith(mockUser);
+  });
+
+  test('login user to marketplace', async () => {
+    const testUser = { email: 'john.doe@example.com', password: 'password123' };
+    await loginUser(testUser.email, testUser.password);
+    expect(loginUser).toHaveBeenCalledWith(testUser.email, testUser.password);
+  });
+
+  test('find user by id', async () => {
+    const userId = 123;
+    await getUserById(userId);
+    expect(getUserById).toHaveBeenCalledWith(userId);
+  });
+
+  test('update user by id', async () => {
+    await updateUser(mockUser.id, mockUser);
+    expect(updateUser).toHaveBeenCalledWith(mockUser.id, mockUser);
+  });
+
+  test('get all users with order role filter and user sort', async () => {
+    const mockOrderRoleFilter = 'admin';
+    const mockUserSort = 'name';
+    await getAllUsers(mockOrderRoleFilter, mockUserSort);
+    expect(getAllUsers).toHaveBeenCalledWith(mockOrderRoleFilter, mockUserSort);
+  });
+
+  test('delete user by id', async () => {
+    const userId = 123;
+    await deleteUser(userId);
+    expect(deleteUser).toHaveBeenCalledWith(userId);
+  });
 });

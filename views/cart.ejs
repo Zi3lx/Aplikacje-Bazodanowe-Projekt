@@ -13,7 +13,7 @@
                 <% cartItems.forEach(item => { %>
                     <li>
                         <%= item.name %> - <%= item.price %> PLN x <%= item.quantity %>
-                        <form action="/cart/remove" method="post" style="display:inline;">
+                        <form action="/cart/remove?_method=DELETE" method="post" style="display:inline;">
                             <input type="hidden" name="cartItemId" value="<%= item.id %>">
                             <button type="submit">Usuń</button>
                         </form>

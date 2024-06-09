@@ -1,5 +1,5 @@
 //TODO:
-// fix updating products
+// 6. Naprawic aktualizaje orderow
 
 const express = require('express');
 const path = require('path');
@@ -7,6 +7,8 @@ const knex = require('knex')(require('./knexfile').development);
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const methodOverride = require('method-override');
+const api = require('./api.js');
+const mw = require('./middlewares');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -36,25 +38,10 @@ app.get('/register', (req, res) => {
 });
 
 app.post('/register', async (req, res) => {
-  const { first_name, last_name, email, password } = req.body;
-  await knex('users').insert({ first_name, last_name, email, password, role: 'customer' });
+  const user = { first_name, last_name, email, password } = req.body;
+  await api.saveUser({ first_name, last_name, email, password, role: 'customer' });;
   res.redirect('/login');
 });
-
-// Middleware to check if user is authenticated
-const isAuthenticated = (req, res, next) => {
-  if (req.session.user) {
-    return next();
-  }
-  res.redirect('/login');
-};
-
-const isAdmin = (req, res, next) => {
-  if (req.session.user && req.session.user.role === 'admin') {
-    return next();
-  }
-  res.status(403).send('Access denied. Admins only.');
-};
 
 // Login page
 app.get('/login', (req, res) => {
@@ -64,14 +51,15 @@ app.get('/login', (req, res) => {
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    const user = await knex('users').where({ email, password }).first();
+    const user = await api.loginUser(email, password, res);
     if (user) {
       req.session.user = user;
       res.redirect('/');
     } else {
       res.render('login', { error: 'Invalid email or password' });
     }
-  } catch (err) {
+  } catch (error) {
+    console.error(error);
     res.render('login', { error: 'An error occurred. Please try again.' });
   }
 });
@@ -82,10 +70,14 @@ app.get('/logout', (req, res) => {
   res.redirect('/');
 });
 
-// Home page
+
 app.get('/', async (req, res) => {
   try {
-    const products = await knex('products').select('*');
+    const sortBy = req.query.sortBy; // Pobieramy wartość parametru sortBy z zapytania
+
+    // Wywołujemy funkcję getProducts z api.js, przekazując sortBy jako parametr
+    const products = await api.getProducts(sortBy);
+
     res.render('index', { products });
   } catch (err) {
     console.error(err);
@@ -94,13 +86,10 @@ app.get('/', async (req, res) => {
 });
 
 // View cart
-app.get('/cart', isAuthenticated, async (req, res) => {
+app.get('/cart', mw.isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
   try {
-    const cartItems = await knex('cart_items')
-      .join('products', 'cart_items.product_id', 'products.id')
-      .where('cart_items.user_id', userId)
-      .select('cart_items.id', 'products.name', 'products.price', 'cart_items.quantity');
+    const cartItems = await api.getCartItems(userId);
     res.render('cart', { cartItems });
   } catch (err) {
     res.status(500).send('Error retrieving cart items');
@@ -108,56 +97,54 @@ app.get('/cart', isAuthenticated, async (req, res) => {
 });
 
 // Add to cart
-app.post('/cart', isAuthenticated, async (req, res) => {
+app.post('/cart', mw.isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
   const { product_id, quantity } = req.body;
   try {
-    await knex('cart_items').insert({ user_id: userId, product_id, quantity });
+    await api.insertToCart(userId, { product_id, quantity });
     res.redirect('/cart');
   } catch (err) {
-    console.error('Error adding to cart:', err); // Log the error for debugging
+    console.error('Error adding to cart:', err);
     res.status(500).send('Error adding to cart');
   }
 });
 
 // Remove from cart
-app.delete('/cart', isAuthenticated, async (req, res) => {
+app.delete('/cart/remove', mw.isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
   const { cartItemId } = req.body;
   try {
-    await knex('cart_items').where({ id: cartItemId, user_id: userId }).del();
+    await api.deleteFromCart(cartItemId, userId);
     res.redirect('/cart');
   } catch (err) {
-    res.status(500).send('Error removing from cart');
+    console.log('Error removing from cart:', err);
+    //res.status(500).send('Error removing from cart');
   }
 });
 
 // Submit order
-app.post('/orders', isAuthenticated, async (req, res) => {
+app.post('/orders', mw.isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
 
   try {
-    // Fetch cart items for the user
-    const cartItems = await knex('cart_items').where({ user_id: userId });
+    const cartItems = await api.getCartItems(userId);
+    console.log(cartItems);
 
     if (cartItems.length === 0) {
       return res.redirect('/cart');
     }
 
-    // Create a new order
-    const [orderId] = await knex('orders').insert({ user_id: userId });
+    const orderId = await api.insertOrders(userId);
+    console.log(orderId);
 
-    // Move items from cart to order_items
     const orderItems = cartItems.map(item => ({
       order_id: orderId,
-      product_id: item.product_id,
+      product_id: item.id,
       quantity: item.quantity
     }));
 
-    await knex('order_items').insert(orderItems);
-
-    // Clear the cart
-    await knex('cart_items').where({ user_id: userId }).del();
+    await api.insertToOrderItems(orderItems);
+    await api.deleteAllFromCart(userId);
 
     res.redirect('/orders');
   } catch (err) {
@@ -167,16 +154,10 @@ app.post('/orders', isAuthenticated, async (req, res) => {
 });
 
 // View orders
-app.get('/orders', isAuthenticated, async (req, res) => {
+app.get('/orders', mw.isAuthenticated, async (req, res) => {
+  const userId = req.session.user.id;
   try {
-    // Get the user's orders with product details
-    const orders = await knex('orders')
-      .join('order_items', 'orders.id', '=', 'order_items.order_id')
-      .join('products', 'order_items.product_id', '=', 'products.id')
-      .select('orders.id as order_id', 'products.name as product_name', 'order_items.quantity', 'orders.status', 'orders.created_at')
-      .where('orders.user_id', req.session.user.id);
-
-    // Render the orders view
+    const orders = await api.getUserOrders(userId);
     res.render('orders', { orders });
   } catch (err) {
     console.error(err);
@@ -185,17 +166,17 @@ app.get('/orders', isAuthenticated, async (req, res) => {
 });
 
 // Display form to add a new product
-app.get('/products/new', isAuthenticated, (req, res) => {
+app.get('/products/new', mw.isAuthenticated, (req, res) => {
   res.render('add_products');
 });
 
 // Handle form submission to add a new product
-app.post('/products', isAuthenticated, async (req, res) => {
+app.post('/products', mw.isAuthenticated, async (req, res) => {
   const { name, price, description } = req.body;
   const userId = req.session.user.id;
 
   try {
-    await knex('products').insert({ name, price, description, user_id: userId });
+    await api.insertToProducts([{ name, price, description, user_id: userId }], userId);
     res.redirect('/');
   } catch (err) {
     console.error(err);
@@ -204,45 +185,46 @@ app.post('/products', isAuthenticated, async (req, res) => {
 });
 
 // Handle form submission to update a product
-app.put('/products/:id/edit', isAuthenticated, async (req, res) => {
+app.put('/products/:id/edit', mw.isAuthenticated, async (req, res) => {
   const productId = req.params.id;
   const userId = req.session.user.id;
   const { name, price, description } = req.body;
 
   try {
-    const product = await knex('products').where({ id: productId }).first();
+    const product = await api.getProductsById(productId);
 
     if (!product) {
       return res.status(404).send('Product not found');
     }
 
-    const user = await knex('users').where({ id: userId }).first();
+    const user = await api.getUserById(userId);
 
     if (product.user_id !== userId && user.role !== 'admin') {
       return res.status(403).send('You are not authorized to edit this product');
     }
 
-    await knex('products').where({ id: productId }).update({ name, price, description });
+    await api.updateProduct(productId, { name, price, description });
 
     res.redirect('/');
   } catch (err) {
+    console.log(err);
     res.status(500).send('Error updating product');
   }
 });
 
 // Display form to edit a product
-app.get('/products/:id/edit', isAuthenticated, async (req, res) => {
+app.get('/products/:id/edit', mw.isAuthenticated, async (req, res) => {
   const productId = req.params.id;
   const userId = req.session.user.id;
 
   try {
-    const product = await knex('products').where({ id: productId }).first();
+    const product = await api.getProductsById(productId);
 
     if (!product) {
       return res.status(404).send('Product not found');
     }
 
-    const user = await knex('users').where({ id: userId }).first();
+    const user = await api.getUserById(userId);
 
     if (product.user_id !== userId && user.role !== 'admin') {
       return res.status(403).send('You are not authorized to edit this product');
@@ -255,25 +237,25 @@ app.get('/products/:id/edit', isAuthenticated, async (req, res) => {
 });
 
 // Handle product deletion
-app.delete('/products/:id/delete', isAuthenticated, async (req, res) => {
+app.delete('/products/:id/delete', mw.isAuthenticated, async (req, res) => {
     const productId = req.params.id;
     const userId = req.session.user.id;
 
     try {
         // Check if the product exists
-        const product = await knex('products').where({ id: productId }).first();
+        const product = await api.getProductsById(productId);
         if (!product) {
             return res.status(404).send('Product not found');
         }
 
         // Check if the user is authorized to delete the product
-        const user = await knex('users').where({ id: userId }).first();
+        const user = await api.getUserById(userId);
         if (!user || (user.role !== 'admin' && user.id !== product.user_id)) {
             return res.status(403).send('You are not authorized to delete this product');
         }
 
         // Delete the product
-        await knex('products').where({ id: productId }).del();
+        await api.deleteProduct(productId);
         res.redirect('/');
     } catch (err) {
         console.error(err);
@@ -283,34 +265,15 @@ app.delete('/products/:id/delete', isAuthenticated, async (req, res) => {
 
 
 // View admin page
-app.get('/admin', isAdmin, async (req, res) => {
+app.get('/admin', mw.isAdmin, async (req, res) => {
   const userRoleFilter = req.query.userRoleFilter || '';
   const userSort = req.query.userSort || '';
   const orderStatusFilter = req.query.orderStatusFilter || '';
   const orderSort = req.query.orderSort || '';
 
-  let usersQuery = knex('users').select('*');
-  let ordersQuery = knex('orders').select('*');
-
-  if (userRoleFilter) {
-    usersQuery = usersQuery.where('role', userRoleFilter);
-  }
-
-  if (userSort) {
-    usersQuery = usersQuery.orderBy(userSort);
-  }
-
-  if (orderStatusFilter) {
-    ordersQuery = ordersQuery.where('status', orderStatusFilter);
-  }
-
-  if (orderSort) {
-    ordersQuery = ordersQuery.orderBy(orderSort);
-  }
-
   try {
-    const users = await usersQuery;
-    const orders = await ordersQuery;
+    const users = await api.getAllUsers(userRoleFilter, userSort);
+    const orders = await api.getAllOrders(orderStatusFilter, orderSort);
     res.render('admin', { users, orders, userRoleFilter, userSort, orderStatusFilter, orderSort });
   } catch (err) {
     res.status(500).send('Error retrieving data');
@@ -318,10 +281,10 @@ app.get('/admin', isAdmin, async (req, res) => {
 });
 
 // Add a new user
-app.post('/admin/users', isAdmin, async (req, res) => {
+app.post('/admin/users', mw.isAdmin, async (req, res) => {
   const { first_name, last_name, email, password, role } = req.body;
   try {
-    await knex('users').insert({ first_name, last_name, email, password, role });
+    await api.saveUser({ first_name, last_name, email, password, role });
     res.redirect('/admin');
   } catch (err) {
     res.status(500).send('Error adding user');
@@ -329,10 +292,10 @@ app.post('/admin/users', isAdmin, async (req, res) => {
 });
 
 // Delete user
-app.delete('/admin/users/:id', isAdmin, async (req, res) => {
+app.delete('/admin/users/:id', mw.isAdmin, async (req, res) => {
     const userId = req.params.id;
     try {
-      await knex('users').where({ id: userId }).del();
+      await api.deleteUser(userId);
       res.redirect('/admin');
     } catch (err) {
       console.error('Error deleting user:', err);
@@ -341,11 +304,11 @@ app.delete('/admin/users/:id', isAdmin, async (req, res) => {
 });   
   
 // Edit user
-app.put('/admin/users/:id', isAdmin, async (req, res) => {
+app.put('/admin/users/:id', mw.isAdmin, async (req, res) => {
     const userId = req.params.id;
     const { first_name, last_name, email, role } = req.body;
     try {
-        await knex('users').where({ id: userId }).update({ first_name, last_name, email, role });
+        await api.updateUser(userId, { first_name, last_name, email, role });
         res.redirect('/admin');
     } catch (err) {
         console.error('Error updating user:', err);
@@ -354,11 +317,11 @@ app.put('/admin/users/:id', isAdmin, async (req, res) => {
 });
 
 // Edit order
-app.put('/admin/orders/:id', isAdmin, async (req, res) => {
+app.put('/admin/orders/:id', mw.isAdmin, async (req, res) => {
     const orderId = req.params.id;
     const { status } = req.body;
     try {
-        await knex('orders').where({ id: orderId }).update({ status });
+        await api.updateOrderStatus(orderId, status);
         res.redirect('/admin');
     } catch (err) {
         console.error(err);
@@ -367,10 +330,10 @@ app.put('/admin/orders/:id', isAdmin, async (req, res) => {
 });
 
 // Delete order
-app.delete('/admin/orders/:id', isAdmin, async (req, res) => {
+app.delete('/admin/orders/:id', mw.isAdmin, async (req, res) => {
   const orderId = req.params.id;
   try {
-    await knex('orders').where({ id: orderId }).del();
+    await api.deleteOrder(orderId);
     res.redirect('/admin');
   } catch (err) {
     res.status(500).send('Error deleting order');
