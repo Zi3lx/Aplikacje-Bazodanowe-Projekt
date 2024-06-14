@@ -3,21 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Add Product</title>
+  <title>Dodaj produkt</title>
 </head>
 <body>
   <div class="container">
-    <h1>Add a New Product</h1>
+    <h1>Dodaj produkt</h1>
     <form action="/products" method="post">
-      <label for="name">Product Name:</label>
+      <label for="name">Nazwa produktu:</label>
       <input type="text" id="name" name="name" required>
-      <label for="price">Price:</label>
+      <label for="price">Cena:</label>
       <input type="number" id="price" name="price" required>
-      <label for="description">Description:</label>
+      <label for="description">Opis:</label>
       <textarea id="description" name="description" required></textarea>
-      <button type="submit">Add Product</button>
+      <button type="submit">Dodaj</button>
     </form>
-    <a href="/">Back to Home</a>
+    <a href="/">
+      <button>Storna główna</button>
+    </a>
   </div>
 </body>
 </html>

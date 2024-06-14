@@ -65,7 +65,7 @@ const insertToProducts = async (products, userId) => {
   }
 }
 
-const getProducts = (sortBy) => {
+const getProducts = async (sortBy, page = 1, limit = 10) => {
   let query = knex('products');
 
   if (sortBy === 'name') {
@@ -74,7 +74,13 @@ const getProducts = (sortBy) => {
     query = query.orderBy('price');
   }
 
-  return query.select('*');
+  const offset = (page - 1) * limit;
+
+  const products = await query.offset(offset).limit(limit).select('*');
+  const totalCount = await knex('products').count('* as count').first();
+  const totalPages = Math.ceil(totalCount.count / limit);
+
+  return { products, totalPages, currentPage: page };
 };
 
 const deleteProduct = async (productId) => {
@@ -114,6 +120,17 @@ const getCartItems = async (userId) => {
   }
 }
 
+async function updateCart(cartItemId, updateData, userId) {
+  try {
+      const updatedCartItem = await knex('cart_items')
+          .where({ product_id: cartItemId, user_id: userId })
+          .update(updateData)
+
+      return updatedCartItem[0];
+  } catch (error) {
+      throw new Error('Error updating cart item: ' + error.message);
+  }
+}
 const insertToCart = async (userId, product) => {
   try {
     await knex('cart_items').insert({ user_id: userId, ...product });
@@ -121,15 +138,19 @@ const insertToCart = async (userId, product) => {
     throw error;
   }
 }
-
 const deleteFromCart = async (cartItemId, userId) => {
   try {
-    await knex('cart_items').where({ id: cartItemId, user_id: userId }).del();
+    console.log('Deleting cart item:', cartItemId, 'for user:', userId);
+    const deletedCount = await knex('cart_items')
+      .where({ product_id: cartItemId, user_id: userId })
+      .del();
     console.log('Cart item deleted successfully');
   } catch (error) {
+    console.error('Error deleting cart item:', error);
     throw error;
   }
-}
+};
+
 
 const deleteAllFromCart = async (userId) => { 
   try {
@@ -196,14 +217,10 @@ const getAllOrders = async (orderStatusFilter, orderSort) => {
   }
 }
 
-const updateOrderStatus = async (orderId, status, res) => {
+const updateOrderStatus = async (orderId, status) => {
   try {
     const result = await knex('orders').where({ id: orderId }).update({ status });
-    if (result) {
-      res.status(201).send('Order status updated');
-    } else {
-      res.status(404).send('Order not found');
-    }
+    return result;
   } catch (error) {
     res.status(500).send(error.message);
   }
@@ -231,5 +248,6 @@ module.exports = {
   deleteOrder, 
   getUserOrders, 
   insertToProducts, 
-  updateOrderStatus  
+  updateOrderStatus,
+  updateCart
 };

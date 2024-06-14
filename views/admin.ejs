@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
+    <title>Admin panel</title>
 </head>
 <body>
-    <h1>Admin Dashboard</h1>
-    <a href="/">Strona główna</a>
+    <h1>Admin panel</h1>
+    <a href="/">
+        <button>Strona główna</button>
+    </a>
 
-    <h2>Manage Users</h2>
+    <h2>Zarzadzaj uzytkownikami </h2>
     <form method="get" action="/admin" id="userFilterForm">
         <label for="userRoleFilter">Filter by Role:</label>
         <select name="userRoleFilter" id="userRoleFilter" onchange="document.getElementById('userFilterForm').submit()">
@@ -23,8 +25,8 @@
         <label for="userSort">Sort by:</label>
         <select name="userSort" id="userSort" onchange="document.getElementById('userSortForm').submit()">
             <option value="">None</option>
-            <option value="first_name" <%= userSort === 'first_name' ? 'selected' : '' %>>First Name</option>
-            <option value="last_name" <%= userSort === 'last_name' ? 'selected' : '' %>>Last Name</option>
+            <option value="first_name" <%= userSort === 'first_name' ? 'selected' : '' %>>Imie</option>
+            <option value="last_name" <%= userSort === 'last_name' ? 'selected' : '' %>>Nazwisko</option>
             <option value="email" <%= userSort === 'email' ? 'selected' : '' %>>Email</option>
         </select>
     </form>
@@ -50,7 +52,7 @@
                     <td><%= user.role %></td>
                     <td>
                         <form action="/admin/users/<%= user.id %>?_method=DELETE" method="post" style="display:inline;">
-                            <button type="submit">Delete</button>
+                            <button type="submit">Usun</button>
                         </form>
                         <form action="/admin/users/<%= user.id %>?_method=PUT" method="post" style="display:inline;">
                             <input type="text" name="first_name" value="<%= user.first_name %>" required>
@@ -60,7 +62,7 @@
                                 <option value="customer" <%= user.role === 'customer' ? 'selected' : '' %>>Customer</option>
                                 <option value="admin" <%= user.role === 'admin' ? 'selected' : '' %>>Admin</option>
                             </select>
-                            <button type="submit">Save Changes</button>
+                            <button type="submit">Zapisz</button>
                         </form>
                     </td>
                 </tr>
@@ -68,7 +70,7 @@
         </tbody>
     </table>
 
-    <h2>Add New User</h2>
+    <h2>Dodaj nowego uzytkownika</h2>
     <form action="/admin/users" method="post">
         <input type="text" name="first_name" placeholder="First Name" required>
         <input type="text" name="last_name" placeholder="Last Name" required>
@@ -78,16 +80,17 @@
             <option value="customer">Customer</option>
             <option value="admin">Admin</option>
         </select>
-        <button type="submit">Add User</button>
+        <button type="submit">Dodaj</button>
     </form>
 
-    <h2>Manage Orders</h2>
+    <h2>Zarzadzaj zamowieniami</h2>
     <form method="get" action="/admin" id="orderFilterForm">
         <label for="orderStatusFilter">Filter by Status:</label>
         <select name="orderStatusFilter" id="orderStatusFilter" onchange="document.getElementById('orderFilterForm').submit()">
             <option value="">All</option>
             <option value="pending" <%= orderStatusFilter === 'pending' ? 'selected' : '' %>>Pending</option>
-            <option value="completed" <%= orderStatusFilter === 'completed' ? 'selected' : '' %>>Completed</option>
+            <option value="shipped" <%= orderStatusFilter === 'shipped' ? 'selected' : '' %>>Shipped</option>
+            <option value="delivered" <%= orderStatusFilter === 'delivered' ? 'selected' : '' %>>Delivered</option>
             <option value="cancelled" <%= orderStatusFilter === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
         </select>
     </form>
@@ -128,11 +131,11 @@
                                 <option value="delivered" <%= order.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
                                 <option value="cancelled" <%= order.status === 'cancelled' ? 'selected' : '' %>>Cancelled</option>
                             </select>
-                            <button type="submit">Update Order</button>
+                            <button type="submit">Aktualizuj</button>
                         </form>
                         
                         <form action="/admin/orders/<%= order.id %>?_method=DELETE" method="post" style="display:inline;">
-                            <button type="submit">Delete</button>
+                            <button type="submit">Usun</button>
                         </form>
                     </td>
                 </tr>

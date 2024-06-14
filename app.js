@@ -1,9 +1,14 @@
 //TODO:
-// 6. Naprawic aktualizaje orderow
+// 1. Stworzyc API git
+// 2. Naprawic zalogowanie git
+// 3. Naprawic usuwanie git
+// 4. Naprawic dodawanie git
+// 5. Naprawic edycja userów git
+// 6. Naprawic aktualizaje orderow git 
+// 7. Usuwanie z koszyka
 
 const express = require('express');
 const path = require('path');
-const knex = require('knex')(require('./knexfile').development);
 const session = require('express-session');
 const cookieParser = require('cookie-parser');
 const methodOverride = require('method-override');
@@ -17,7 +22,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.urlencoded({ extended: false }));
-app.use(express.json()); // Add this line to parse JSON bodies
+app.use(express.json());
 app.use(cookieParser());
 app.use(methodOverride('_method'));
 app.use(session({
@@ -37,7 +42,7 @@ app.get('/register', (req, res) => {
   res.render('register');
 });
 
-app.post('/register', async (req, res) => {
+app.post('/register', mw.validateUserData, async (req, res) => {
   const user = { first_name, last_name, email, password } = req.body;
   await api.saveUser({ first_name, last_name, email, password, role: 'customer' });;
   res.redirect('/login');
@@ -64,7 +69,7 @@ app.post('/login', async (req, res) => {
   }
 });
 
-// Logout route
+// Logout
 app.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/');
@@ -73,17 +78,19 @@ app.get('/logout', (req, res) => {
 
 app.get('/', async (req, res) => {
   try {
-    const sortBy = req.query.sortBy; // Pobieramy wartość parametru sortBy z zapytania
+    const sortBy = req.query.sortBy;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    // Wywołujemy funkcję getProducts z api.js, przekazując sortBy jako parametr
-    const products = await api.getProducts(sortBy);
+    const { products, totalPages, currentPage } = await api.getProducts(sortBy, page, limit);
 
-    res.render('index', { products });
+    res.render('index', { products, totalPages, currentPage, sortBy, limit, user: req.session.user });
   } catch (err) {
     console.error(err);
     res.status(500).send('Error retrieving products');
   }
 });
+
 
 // View cart
 app.get('/cart', mw.isAuthenticated, async (req, res) => {
@@ -109,16 +116,31 @@ app.post('/cart', mw.isAuthenticated, async (req, res) => {
   }
 });
 
+// POST method spoofing for PUT request
+app.put('/cart/update', mw.isAuthenticated, async (req, res) => {
+  const userId = req.session.user.id;
+  const { cartItemId, quantity } = req.body;
+  try {
+      await api.updateCart(cartItemId, { quantity }, userId);
+      res.redirect('/cart');
+  } catch (err) {
+      console.log('Error updating cart:', err);
+      res.status(500).send('Error updating cart');
+  }
+});
+
+
 // Remove from cart
 app.delete('/cart/remove', mw.isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
   const { cartItemId } = req.body;
+  console.log(cartItemId, userId);
   try {
     await api.deleteFromCart(cartItemId, userId);
     res.redirect('/cart');
   } catch (err) {
     console.log('Error removing from cart:', err);
-    //res.status(500).send('Error removing from cart');
+    res.status(500).send('Error removing from cart');
   }
 });
 
@@ -242,19 +264,16 @@ app.delete('/products/:id/delete', mw.isAuthenticated, async (req, res) => {
     const userId = req.session.user.id;
 
     try {
-        // Check if the product exists
         const product = await api.getProductsById(productId);
         if (!product) {
             return res.status(404).send('Product not found');
         }
 
-        // Check if the user is authorized to delete the product
         const user = await api.getUserById(userId);
         if (!user || (user.role !== 'admin' && user.id !== product.user_id)) {
             return res.status(403).send('You are not authorized to delete this product');
         }
 
-        // Delete the product
         await api.deleteProduct(productId);
         res.redirect('/');
     } catch (err) {

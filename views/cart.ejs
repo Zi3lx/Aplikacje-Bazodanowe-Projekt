@@ -13,6 +13,11 @@
                 <% cartItems.forEach(item => { %>
                     <li>
                         <%= item.name %> - <%= item.price %> PLN x <%= item.quantity %>
+                        <form action="/cart/update?_method=PUT" method="post" style="display:inline;">
+                            <input type="hidden" name="cartItemId" value="<%= item.id %>">
+                            <input type="number" name="quantity" value="<%= item.quantity %>" min="1" required>
+                            <button type="submit">Zmień</button>
+                        </form>
                         <form action="/cart/remove?_method=DELETE" method="post" style="display:inline;">
                             <input type="hidden" name="cartItemId" value="<%= item.id %>">
                             <button type="submit">Usuń</button>
@@ -20,13 +25,16 @@
                     </li>
                 <% }) %>
             </ul>
+            <p>Suma: <%= cartItems.reduce((total, item) => total + item.price * item.quantity, 0) %> PLN</p>
             <form action="/orders" method="post">
                 <button type="submit">Złóż zamówienie</button>
             </form>
         <% } else { %>
             <p>Twój koszyk jest pusty.</p>
         <% } %>
-        <a href="/">Powrót do strony głównej</a>
+        <a href="/">
+            <button>Strona główna</button>
+        </a>
     </div>
 </body>
 </html>
