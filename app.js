@@ -5,7 +5,7 @@
 // 4. Naprawic dodawanie git
 // 5. Naprawic edycja userów git
 // 6. Naprawic aktualizaje orderow git 
-// 7. Usuwanie z koszyka
+// 7. Naprawic usuwanie z koszyka git
 
 const express = require('express');
 const path = require('path');
@@ -31,13 +31,29 @@ app.use(session({
   saveUninitialized: false
 }));
 
-// Middleware to set the user in response locals if logged in
+// Add user data to locals
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
   next();
 });
 
-// Rejestracja
+// Main page
+app.get('/', async (req, res) => {
+  try {
+    const sortBy = req.query.sortBy;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const { products, totalPages, currentPage } = await api.getProducts(sortBy, page, limit);
+
+    res.render('index', { products, totalPages, currentPage, sortBy, limit, user: req.session.user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error retrieving products');
+  }
+});
+
+// Register page
 app.get('/register', (req, res) => {
   res.render('register');
 });
@@ -74,23 +90,6 @@ app.get('/logout', (req, res) => {
   req.session.destroy();
   res.redirect('/');
 });
-
-
-app.get('/', async (req, res) => {
-  try {
-    const sortBy = req.query.sortBy;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const { products, totalPages, currentPage } = await api.getProducts(sortBy, page, limit);
-
-    res.render('index', { products, totalPages, currentPage, sortBy, limit, user: req.session.user });
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error retrieving products');
-  }
-});
-
 
 // View cart
 app.get('/cart', mw.isAuthenticated, async (req, res) => {
