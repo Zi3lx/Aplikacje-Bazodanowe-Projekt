@@ -1,12 +1,3 @@
-//TODO:
-// 1. Stworzyc API git
-// 2. Naprawic zalogowanie git
-// 3. Naprawic usuwanie git
-// 4. Naprawic dodawanie git
-// 5. Naprawic edycja userów git
-// 6. Naprawic aktualizaje orderow git 
-// 7. Naprawic usuwanie z koszyka git
-
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
@@ -16,6 +7,7 @@ const api = require('./api.js');
 const mw = require('./middlewares');
 const app = express();
 const PORT = process.env.PORT || 3000;
+const HOST = '';
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -42,7 +34,7 @@ app.get('/', async (req, res) => {
   try {
     const sortBy = req.query.sortBy;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 3;
 
     const { products, totalPages, currentPage } = await api.getProducts(sortBy, page, limit);
 
@@ -120,11 +112,11 @@ app.put('/cart/update', mw.isAuthenticated, async (req, res) => {
   const userId = req.session.user.id;
   const { cartItemId, quantity } = req.body;
   try {
-      await api.updateCart(cartItemId, { quantity }, userId);
-      res.redirect('/cart');
+    await api.updateCart(cartItemId, { quantity }, userId);
+    res.redirect('/cart');
   } catch (err) {
-      console.log('Error updating cart:', err);
-      res.status(500).send('Error updating cart');
+    console.log('Error updating cart:', err);
+    res.status(500).send('Error updating cart');
   }
 });
 
@@ -259,26 +251,26 @@ app.get('/products/:id/edit', mw.isAuthenticated, async (req, res) => {
 
 // Handle product deletion
 app.delete('/products/:id/delete', mw.isAuthenticated, async (req, res) => {
-    const productId = req.params.id;
-    const userId = req.session.user.id;
+  const productId = req.params.id;
+  const userId = req.session.user.id;
 
-    try {
-        const product = await api.getProductsById(productId);
-        if (!product) {
-            return res.status(404).send('Product not found');
-        }
-
-        const user = await api.getUserById(userId);
-        if (!user || (user.role !== 'admin' && user.id !== product.user_id)) {
-            return res.status(403).send('You are not authorized to delete this product');
-        }
-
-        await api.deleteProduct(productId);
-        res.redirect('/');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error deleting product');
+  try {
+    const product = await api.getProductsById(productId);
+    if (!product) {
+      return res.status(404).send('Product not found');
     }
+
+    const user = await api.getUserById(userId);
+    if (!user || (user.role !== 'admin' && user.id !== product.user_id)) {
+      return res.status(403).send('You are not authorized to delete this product');
+    }
+
+    await api.deleteProduct(productId);
+    res.redirect('/');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error deleting product');
+  }
 });
 
 
@@ -311,40 +303,40 @@ app.post('/admin/users', mw.isAdmin, async (req, res) => {
 
 // Delete user
 app.delete('/admin/users/:id', mw.isAdmin, async (req, res) => {
-    const userId = req.params.id;
-    try {
-      await api.deleteUser(userId);
-      res.redirect('/admin');
-    } catch (err) {
-      console.error('Error deleting user:', err);
-      res.status(500).send('Error deleting user');
-    }
-});   
-  
+  const userId = req.params.id;
+  try {
+    await api.deleteUser(userId);
+    res.redirect('/admin');
+  } catch (err) {
+    console.error('Error deleting user:', err);
+    res.status(500).send('Error deleting user');
+  }
+});
+
 // Edit user
 app.put('/admin/users/:id', mw.isAdmin, async (req, res) => {
-    const userId = req.params.id;
-    const { first_name, last_name, email, role } = req.body;
-    try {
-        await api.updateUser(userId, { first_name, last_name, email, role });
-        res.redirect('/admin');
-    } catch (err) {
-        console.error('Error updating user:', err);
-        res.status(500).send('Error updating user');
-    }
+  const userId = req.params.id;
+  const { first_name, last_name, email, role } = req.body;
+  try {
+    await api.updateUser(userId, { first_name, last_name, email, role });
+    res.redirect('/admin');
+  } catch (err) {
+    console.error('Error updating user:', err);
+    res.status(500).send('Error updating user');
+  }
 });
 
 // Edit order
 app.put('/admin/orders/:id', mw.isAdmin, async (req, res) => {
-    const orderId = req.params.id;
-    const { status } = req.body;
-    try {
-        await api.updateOrderStatus(orderId, status);
-        res.redirect('/admin');
-    } catch (err) {
-        console.error(err);
-        res.status(500).send('Error updating order');
-    }
+  const orderId = req.params.id;
+  const { status } = req.body;
+  try {
+    await api.updateOrderStatus(orderId, status);
+    res.redirect('/admin');
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error updating order');
+  }
 });
 
 // Delete order
@@ -358,6 +350,6 @@ app.delete('/admin/orders/:id', mw.isAdmin, async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(PORT, HOST, () => {
+  console.log(`Server running on port ${HOST} ${PORT}`);
 });

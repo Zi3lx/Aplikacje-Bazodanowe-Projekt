@@ -48,6 +48,8 @@ describe("User API Functions", () => {
     const getUser = await getUserById(mockUser.id);
     expect(getUserById).toHaveBeenCalledWith(mockUser.id);
     expect(getUser[0]).toEqual(mockUser);
+
+    // tylko jeden expect w funkcjach najlepiej
   });
 
   test("loguje użytkownika do aplikacji", async () => {

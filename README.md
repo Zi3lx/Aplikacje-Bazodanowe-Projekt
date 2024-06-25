@@ -64,7 +64,7 @@ By działało trzeba mieć:
 Upewnij się, że masz skonfigurowany plik `.env` w katalogu głównym projektu. Plik ten powinien zawierać następujące zmienne środowiskowe:
 
 DB_HOST=localhost  
-DB_PORT=3306
+DB_PORT=3306    
 DB_USER=twoja_nazwa_uzytkownika  
 DB_PASS=twoje_haslo  
 DB_NAME=nazwa_twojej_bazy_danych  
