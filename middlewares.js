@@ -28,6 +28,20 @@ const validateUserData = async (req, res, next) => {
   next();
 };
 
+const validateProductData = async (req, res, next) => {
+  const { name, price, description } = req.body;
+  if (!name || !description || !price) {
+    return res.status(400).send('All fields are required.');
+  }
+  if (name.includes(' ') || description.includes(' ')) {
+    return res.status(400).send('Name or description cannot contain spaces.');
+  }
+  if (price < 0) {
+    return res.status(400).send('Price cannot be negative.');
+  }
+  next();
+};
+
 const isAuthenticated = (req, res, next) => {
   if (req.session.user) {
     return next();
@@ -42,4 +56,4 @@ const isAdmin = (req, res, next) => {
   res.status(403).send('Access denied. Admins only.');
 };
 
-module.exports = { isAuthenticated, isAdmin, validateUserData }
+module.exports = { isAuthenticated, isAdmin, validateUserData, validateProductData }

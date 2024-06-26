@@ -7,7 +7,7 @@ const api = require('./api.js');
 const mw = require('./middlewares');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = 'localhost';
+const HOST = '192.168.1.47';
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -195,7 +195,7 @@ app.get('/products/new', mw.isAuthenticated, (req, res) => {
 });
 
 // Handle form submission to add a new product
-app.post('/products', mw.isAuthenticated, async (req, res) => {
+app.post('/products', mw.isAuthenticated, mw.validateProductData, async (req, res) => {
   const { name, price, description } = req.body;
   const userId = req.session.user.id;
 
