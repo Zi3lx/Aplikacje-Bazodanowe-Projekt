@@ -41,26 +41,19 @@ describe("User API Functions", () => {
 
   test("saves a user to the database and retrieves it by ID", async () => {
     await saveUser(mockUser);
-    expect(saveUser).toHaveBeenCalledWith(mockUser);
 
     getUserById.mockResolvedValue([mockUser]);
 
     const getUser = await getUserById(mockUser.id);
-    expect(getUserById).toHaveBeenCalledWith(mockUser.id);
     expect(getUser[0]).toEqual(mockUser);
-
-    // tylko jeden expect w funkcjach najlepiej
   });
 
   test("loguje użytkownika do aplikacji", async () => {
     const { email, password } = mockUser;
     const expectedLoggedInUser = { ...mockUser };
-    //delete expectedLoggedInUser.email; //Bez maila nie przejdzie
 
     loginUser.mockResolvedValue(mockUser);
     const loggedInUser = await loginUser(email, password);
-
-    expect(loginUser).toHaveBeenCalledWith(email, password);
 
     expect(loggedInUser).toEqual(expectedLoggedInUser);
   });
@@ -70,7 +63,6 @@ describe("User API Functions", () => {
     //console.log(updatedUser);
     updateUser.mockResolvedValue(2);
     const result = await updateUser(mockUser.id, updatedUser);
-    expect(updateUser).toHaveBeenCalledWith(mockUser.id, updatedUser);
     //console.log(result)
     expect(result).toBe(2);
   });
@@ -81,7 +73,6 @@ describe("User API Functions", () => {
     deleteUser.mockResolvedValue(1);
 
     const result = await deleteUser(userId);
-    expect(deleteUser).toHaveBeenCalledWith(userId);
     expect(result).toBe(1);
   });
 
@@ -101,7 +92,6 @@ describe("User API Functions", () => {
     getAllUsers.mockResolvedValue(mockUsers);
 
     const users = await getAllUsers();
-    expect(getAllUsers).toHaveBeenCalled();
     expect(users).toEqual(mockUsers);
   });
 });

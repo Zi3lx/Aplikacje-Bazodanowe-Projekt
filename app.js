@@ -7,7 +7,7 @@ const api = require('./api.js');
 const mw = require('./middlewares');
 const app = express();
 const PORT = process.env.PORT || 3000;
-const HOST = '';
+const HOST = 'localhost';
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -23,6 +23,17 @@ app.use(session({
   saveUninitialized: false
 }));
 
+// Middleware do obsługi błędów
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(err.status || 500).json({
+    error: {
+      message: err.message || 'Internal Server Error',
+    },
+  });
+});
+
+
 // Add user data to locals
 app.use((req, res, next) => {
   res.locals.user = req.session.user || null;
@@ -34,7 +45,7 @@ app.get('/', async (req, res) => {
   try {
     const sortBy = req.query.sortBy;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 3;
+    const limit = parseInt(req.query.limit) || 6;
 
     const { products, totalPages, currentPage } = await api.getProducts(sortBy, page, limit);
 

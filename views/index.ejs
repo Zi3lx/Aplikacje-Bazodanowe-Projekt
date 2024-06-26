@@ -10,6 +10,30 @@
             color: #fff;
         }
     </style>
+    <script>
+        function confirmDelete(event, itemType) {
+            const confirmed = confirm(`Czy chcesz usunac ${itemType}?`);
+            if (!confirmed) {
+                event.preventDefault();
+            }
+        }
+
+        function toggleDescription(productId, description) {
+            var descriptionSpan = document.getElementById('description' + productId);
+            var button = event.target;
+            if (descriptionSpan.innerText.length === 15) {
+                descriptionSpan.innerText = description;
+                button.innerText = 'Zwiń';
+            } else {
+                descriptionSpan.innerText = description.substring(0, 15);
+                button.innerText = '...';
+            }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+    </script>
 </head>
 <body>
     <button onclick="toggleDarkMode()">Zmień na tryb ciemny</button>
@@ -47,22 +71,6 @@
                     <% } else { %>
                         <%= product.description %>
                     <% } %>
-
-                    <script>
-                        function toggleDescription(productId, description) {
-                            var descriptionSpan = document.getElementById('description' + productId);
-                            var button = event.target;
-                            if (descriptionSpan.innerText.length === 15) {
-                                descriptionSpan.innerText = description;
-                                button.innerText = 'Zwiń';
-                            } else {
-                                descriptionSpan.innerText = description.substring(0, 15);
-                                button.innerText = '...';
-                            }
-                        }
-                    </script>
-                    
-
                     <% if (user) { %>
                         <form action="/cart" method="post" style="display:inline;">
                             <input type="hidden" name="product_id" value="<%= product.id %>">
@@ -71,7 +79,7 @@
                         </form>
                         <% if (user.id === product.user_id || user.role === 'admin') { %>
                             <a href="/products/<%= product.id %>/edit"><button>Edytuj</button></a>
-                            <form action="/products/<%= product.id %>/delete?_method=DELETE" method="post" style="display:inline;">
+                            <form action="/products/<%= product.id %>/delete?_method=DELETE" method="post" style="display:inline;" onsubmit="confirmDelete(event, 'product')">
                                 <button type="submit">Usuń</button>
                             </form>                            
                         <% } %>
@@ -92,11 +100,5 @@
             <% } %>
         </div>
     </div>
-
-    <script>
-        function toggleDarkMode() {
-            document.body.classList.toggle('dark-mode');
-        }
-    </script>
 </body>
 </html>

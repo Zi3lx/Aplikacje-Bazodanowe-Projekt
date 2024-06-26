@@ -1,15 +1,18 @@
 const knex = require('knex')(require('./knexfile').development);
 
 const saveUser = async (user) => {
-  //try catch i wyrzucanie jsonu zeby było widac błedy po stronie api
-  await knex('users').insert({ ...user });
+  try {
+    await knex('users').insert({ ...user });
+  } catch (error) {
+    throw new Error('Error saving user: ' + error.message);
+  }
 };
 
 const deleteUser = async (userId) => {
   try {
     await knex('users').where({ id: userId }).del();
   } catch (error) {
-    throw error;
+    throw new Error('Error deleting user: ' + error.message);
   }
 }
 
@@ -17,7 +20,7 @@ const updateUser = async (userId, user) => {
   try {
     await knex('users').where({ id: userId }).update({ ...user });
   } catch (error) {
-    throw error;
+    throw new Error('Error updating user: ' + error.message);
   }
 }
 
@@ -33,10 +36,9 @@ const getAllUsers = async (orderRoleFilter, userSort) => {
 
   try {
     const users = await usersQuery;
-
     return users;
   } catch (error) {
-    throw error;
+    throw new Error('Error retrieving users: ' + error.message);
   }
 }
 
@@ -45,16 +47,19 @@ const getUserById = async (userId) => {
     const user = await knex('users').where({ id: userId }).first();
     return user;
   } catch (error) {
-    throw error;
+    throw new Error('Error retrieving user: ' + error.message);
   }
 }
 
-const loginUser = async (email, password, res) => {
+const loginUser = async (email, password) => {
   try {
     const user = await knex('users').where({ email, password }).first();
+    if (!user) {
+      throw new Error('Invalid email or password');
+    }
     return user;
   } catch (error) {
-    throw error;
+    throw new Error('Error logging in: ' + error.message);
   }
 }
 
@@ -62,7 +67,7 @@ const insertToProducts = async (products, userId) => {
   try {
     await knex('products').insert(...products, { user_id: userId });
   } catch (error) {
-    throw error;
+    throw new Error('Error inserting products: ' + error.message);
   }
 }
 
@@ -77,18 +82,22 @@ const getProducts = async (sortBy, page = 1, limit) => {
 
   const offset = (page - 1) * limit;
 
-  const products = await query.offset(offset).limit(limit).select('*');
-  const totalCount = await knex('products').count('* as count').first();
-  const totalPages = Math.ceil(totalCount.count / limit);
+  try {
+    const products = await query.offset(offset).limit(limit).select('*');
+    const totalCount = await knex('products').count('* as count').first();
+    const totalPages = Math.ceil(totalCount.count / limit);
 
-  return { products, totalPages, currentPage: page };
+    return { products, totalPages, currentPage: page };
+  } catch (error) {
+    throw new Error('Error retrieving products: ' + error.message);
+  }
 };
 
 const deleteProduct = async (productId) => {
   try {
     await knex('products').where({ id: productId }).del();
   } catch (error) {
-    throw error;
+    throw new Error('Error deleting product: ' + error.message);
   }
 }
 
@@ -97,7 +106,7 @@ const getProductsById = async (productId) => {
     const product = await knex('products').where({ id: productId }).first();
     return product;
   } catch (error) {
-    throw error;
+    throw new Error('Error retrieving product: ' + error.message);
   }
 }
 
@@ -105,7 +114,7 @@ const updateProduct = async (productId, product) => {
   try {
     await knex('products').where({ id: productId }).update(product);
   } catch (error) {
-    throw error;
+    throw new Error('Error updating product: ' + error.message);
   }
 }
 
@@ -117,11 +126,11 @@ const getCartItems = async (userId) => {
       .select('cart_items.id', 'products.id', 'products.name', 'products.price', 'cart_items.quantity');
     return cartItems;
   } catch (error) {
-    throw error;
+    throw new Error('Error retrieving cart items: ' + error.message);
   }
 }
 
-async function updateCart(cartItemId, updateData, userId) {
+const updateCart = async (cartItemId, updateData, userId) => {
   try {
     const updatedCartItem = await knex('cart_items')
       .where({ product_id: cartItemId, user_id: userId })
@@ -132,32 +141,33 @@ async function updateCart(cartItemId, updateData, userId) {
     throw new Error('Error updating cart item: ' + error.message);
   }
 }
+
 const insertToCart = async (userId, product) => {
   try {
     await knex('cart_items').insert({ user_id: userId, ...product });
   } catch (error) {
-    throw error;
+    throw new Error('Error inserting to cart: ' + error.message);
   }
 }
+
 const deleteFromCart = async (cartItemId, userId) => {
   try {
-    console.log('Deleting cart item:', cartItemId, 'for user:', userId);
     const deletedCount = await knex('cart_items')
       .where({ product_id: cartItemId, user_id: userId })
       .del();
-    console.log('Cart item deleted successfully');
+    if (deletedCount === 0) {
+      throw new Error('Cart item not found');
+    }
   } catch (error) {
-    console.error('Error deleting cart item:', error);
-    throw error;
+    throw new Error('Error deleting from cart: ' + error.message);
   }
-};
-
+}
 
 const deleteAllFromCart = async (userId) => {
   try {
     await knex('cart_items').where({ user_id: userId }).del();
   } catch (error) {
-    throw error;
+    throw new Error('Error deleting all items from cart: ' + error.message);
   }
 }
 
@@ -166,7 +176,7 @@ const insertOrders = async (userId) => {
     const [orderId] = await knex('orders').insert({ user_id: userId });
     return orderId;
   } catch (error) {
-    throw error;
+    throw new Error('Error inserting order: ' + error.message);
   }
 }
 
@@ -174,7 +184,7 @@ const deleteOrder = async (orderId) => {
   try {
     await knex('orders').where({ id: orderId }).del();
   } catch (error) {
-    throw error;
+    throw new Error('Error deleting order: ' + error.message);
   }
 }
 
@@ -182,7 +192,7 @@ const insertToOrderItems = async (orderItems) => {
   try {
     await knex('order_items').insert(orderItems)
   } catch (error) {
-    throw error;
+    throw new Error('Error inserting order items: ' + error.message);
   }
 }
 
@@ -195,7 +205,7 @@ const getUserOrders = async (userId) => {
       .where('orders.user_id', userId);
     return orders;
   } catch (error) {
-    throw error;
+    throw new Error('Error retrieving user orders: ' + error.message);
   }
 }
 
@@ -214,7 +224,7 @@ const getAllOrders = async (orderStatusFilter, orderSort) => {
     const orders = await ordersQuery;
     return orders;
   } catch (error) {
-    throw error;
+    throw new Error('Error retrieving orders: ' + error.message);
   }
 }
 
@@ -223,10 +233,9 @@ const updateOrderStatus = async (orderId, status) => {
     const result = await knex('orders').where({ id: orderId }).update({ status });
     return result;
   } catch (error) {
-    res.status(500).send(error.message);
+    throw new Error('Error updating order status: ' + error.message);
   }
 };
-
 
 module.exports = {
   saveUser,

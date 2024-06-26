@@ -7,6 +7,10 @@ const validateUserData = async (req, res, next) => {
     return res.status(400).send('All fields are required.');
   }
 
+  if (first_name.includes(' ') || last_name.includes(' ')) {
+    return res.status(400).send('Name or last name cannot contain spaces.');
+  }
+
   if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
     return res.status(400).send('Enter a valid email.');
   }
@@ -25,17 +29,17 @@ const validateUserData = async (req, res, next) => {
 };
 
 const isAuthenticated = (req, res, next) => {
-    if (req.session.user) {
-      return next();
-    }
-    res.redirect('/login');
+  if (req.session.user) {
+    return next();
+  }
+  res.redirect('/login');
 };
-  
-  const isAdmin = (req, res, next) => {
-    if (req.session.user && req.session.user.role === 'admin') {
-      return next();
-    }
-    res.status(403).send('Access denied. Admins only.');
+
+const isAdmin = (req, res, next) => {
+  if (req.session.user && req.session.user.role === 'admin') {
+    return next();
+  }
+  res.status(403).send('Access denied. Admins only.');
 };
 
 module.exports = { isAuthenticated, isAdmin, validateUserData }
